@@ -1,21 +1,39 @@
 services:
   # React/Vite Frontend - Development
-  app:
+  frontend:
     build:
       context: .
       dockerfile: Dockerfile
       target: development
-    container_name: aquahub-app
+    container_name: aquahub-frontend
     ports:
       - "8080:8080"
     volumes:
       - .:/app
       - /app/node_modules
     depends_on:
+      - api
+    environment:
+      - NODE_ENV=development
+    networks:
+      - aquahub-network
+
+  # FastAPI Backend
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aquahub-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
       db:
         condition: service_healthy
     environment:
-      - NODE_ENV=development
+      - DATABASE_URL=postgresql://aquahub:aquahub_secret@db:5432/aquahub
+      - DEBUG=true
     networks:
       - aquahub-network
 
