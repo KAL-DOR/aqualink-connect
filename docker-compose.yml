@@ -1,0 +1,66 @@
+services:
+  # React/Vite Frontend - Development
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: aquahub-frontend
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - api
+    environment:
+      - NODE_ENV=development
+    networks:
+      - aquahub-network
+
+  # FastAPI Backend
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aquahub-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://aquahub:aquahub_secret@db:5432/aquahub
+      - DEBUG=true
+    networks:
+      - aquahub-network
+
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: aquahub-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: aquahub
+      POSTGRES_PASSWORD: aquahub_secret
+      POSTGRES_DB: aquahub
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - aquahub-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aquahub -d aquahub"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  aquahub-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
