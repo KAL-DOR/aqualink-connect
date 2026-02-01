@@ -58,6 +58,15 @@ class EstadisticasResponse(BaseModel):
     total: int
     con_ubicacion: int
     por_tipo: dict
+
+
+class QuejaCreate(BaseModel):
+    lat: float
+    lng: float
+    tipo: str
+    texto: str
+    username: Optional[str] = "usuario_anonimo"
+    alcaldia: Optional[str] = None
     por_alcaldia: dict
     ultimas_24h: int
 
@@ -148,6 +157,46 @@ async def get_estadisticas(db: Session = Depends(get_db)):
         por_tipo=por_tipo,
         por_alcaldia=por_alcaldia,
         ultimas_24h=ultimas_24h
+    )
+
+
+@router.post("", response_model=QuejaPunto)
+async def create_queja(queja: QuejaCreate, db: Session = Depends(get_db)):
+    """
+    Crear una nueva queja desde el frontend.
+    """
+    import uuid
+
+    # Map tipo string to enum
+    try:
+        tipo_enum = TipoQueja(queja.tipo.lower())
+    except ValueError:
+        tipo_enum = TipoQueja.OTRO
+
+    nueva_queja = Queja(
+        tweet_id=f"user_{uuid.uuid4().hex[:12]}",
+        texto=queja.texto,
+        tipo=tipo_enum,
+        username=queja.username or "usuario_anonimo",
+        latitud=queja.lat,
+        longitud=queja.lng,
+        alcaldia=queja.alcaldia,
+        tweet_created_at=datetime.utcnow(),
+    )
+
+    db.add(nueva_queja)
+    db.commit()
+    db.refresh(nueva_queja)
+
+    return QuejaPunto(
+        id=nueva_queja.id,
+        lat=nueva_queja.latitud,
+        lng=nueva_queja.longitud,
+        tipo=nueva_queja.tipo.value if nueva_queja.tipo else "otro",
+        texto=nueva_queja.texto,
+        username=nueva_queja.username,
+        alcaldia=nueva_queja.alcaldia,
+        created_at=nueva_queja.tweet_created_at or nueva_queja.created_at
     )
 
 

@@ -214,6 +214,12 @@
 }
 
 @layer utilities {
+  /* Vertical text for ad bars */
+  .writing-vertical {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+  }
+
   /* Custom scrollbar */
   .scrollbar-thin {
     scrollbar-width: thin;

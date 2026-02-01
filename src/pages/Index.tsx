@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Droplets, Plus, X, MapPin, AlertTriangle, Clock, ExternalLink, Droplet, CircleOff, TrendingDown, LucideIcon, Moon, Sun } from 'lucide-react';
+import { Droplets, Plus, X, MapPin, AlertTriangle, Clock, ExternalLink, Droplet, CircleOff, TrendingDown, LucideIcon, Moon, Sun, Flame, Activity } from 'lucide-react';
 import { useTheme } from '@/components/theme-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -146,23 +146,58 @@ export default function Index() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedLocation) return;
 
-    const newPoint: PainPoint = {
-      id: Date.now(),
-      lat: selectedLocation.lat,
-      lng: selectedLocation.lng,
-      tipo: formData.type,
-      texto: formData.description || 'Reporte de usuario',
-      username: 'usuario_anonimo',
-      alcaldia: null,
-      created_at: new Date().toISOString(),
-      isUserAdded: true,
-    };
+    try {
+      const response = await fetch(`${API_URL}/quejas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lat: selectedLocation.lat,
+          lng: selectedLocation.lng,
+          tipo: formData.type,
+          texto: formData.description || 'Reporte de usuario',
+          username: 'usuario_anonimo',
+        }),
+      });
 
-    setPainPoints([newPoint, ...painPoints]);
+      if (response.ok) {
+        const newPoint = await response.json();
+        setPainPoints([{ ...newPoint, isUserAdded: true }, ...painPoints]);
+      } else {
+        // Fallback to local-only if API fails
+        const localPoint: PainPoint = {
+          id: Date.now(),
+          lat: selectedLocation.lat,
+          lng: selectedLocation.lng,
+          tipo: formData.type,
+          texto: formData.description || 'Reporte de usuario',
+          username: 'usuario_anonimo',
+          alcaldia: null,
+          created_at: new Date().toISOString(),
+          isUserAdded: true,
+        };
+        setPainPoints([localPoint, ...painPoints]);
+      }
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      // Fallback to local-only
+      const localPoint: PainPoint = {
+        id: Date.now(),
+        lat: selectedLocation.lat,
+        lng: selectedLocation.lng,
+        tipo: formData.type,
+        texto: formData.description || 'Reporte de usuario',
+        username: 'usuario_anonimo',
+        alcaldia: null,
+        created_at: new Date().toISOString(),
+        isUserAdded: true,
+      };
+      setPainPoints([localPoint, ...painPoints]);
+    }
+
     closeModal();
   };
 
@@ -223,46 +258,127 @@ export default function Index() {
         <span className="text-muted-foreground"> para reportar un problema de agua en tu zona</span>
       </div>
 
-      {/* Map Container */}
-      <div className="flex-1 relative">
-        <div className="absolute inset-0">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-muted-foreground">Cargando datos...</div>
-            </div>
-          ) : (
-            <PainPointMap
-              painPoints={painPoints}
-              hotspots={hotspots}
-              onMapClick={handleMapClick}
-              onPointClick={handlePointClick}
-              pendingLocation={selectedLocation}
-            />
-          )}
+      {/* Main Content with Ad Bars */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Ad Bar */}
+        <div className="hidden lg:flex w-[160px] flex-col bg-card/50 border-r border-border p-3 gap-3">
+          <div className="flex-1 bg-secondary/30 rounded-lg flex items-center justify-center border border-dashed border-border">
+            <span className="text-xs text-muted-foreground writing-vertical">Espacio Publicitario</span>
+          </div>
+          <div className="h-[250px] bg-secondary/30 rounded-lg flex items-center justify-center border border-dashed border-border">
+            <span className="text-xs text-muted-foreground text-center px-2">Ad 160x250</span>
+          </div>
         </div>
 
-        {/* Stats Bar */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm py-2 px-4 z-[1000]">
-          <div className="container mx-auto flex items-center justify-between text-sm">
-            <div className="flex items-center gap-4">
-              {painPointTypes.map((type) => {
-                const count = stats?.por_tipo[type.id] || painPoints.filter((p) => p.tipo === type.id).length;
+        {/* Map Container */}
+        <div className="flex-1 relative">
+          <div className="absolute inset-0">
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-muted-foreground">Cargando datos...</div>
+              </div>
+            ) : (
+              <PainPointMap
+                painPoints={painPoints}
+                hotspots={hotspots}
+                onMapClick={handleMapClick}
+                onPointClick={handlePointClick}
+                pendingLocation={selectedLocation}
+              />
+            )}
+          </div>
+
+          {/* Recent Submissions Panel */}
+          <div className="absolute top-4 left-4 w-[280px] bg-card/95 border border-border rounded-lg shadow-lg z-[1000] hidden md:block">
+            <div className="flex items-center gap-2 p-3 border-b border-border">
+              <Activity className="h-4 w-4 text-accent" />
+              <h3 className="font-semibold text-sm">Reportes Recientes</h3>
+            </div>
+            <div className="max-h-[200px] overflow-y-auto">
+              {painPoints.slice(0, 5).map((point) => {
+                const config = painPointTypes.find(t => t.id === point.tipo) || painPointTypes[0];
                 return (
-                  <div key={type.id} className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: type.color }}>
-                      <type.Icon className="w-3 h-3 text-white" />
+                  <div key={point.id} className="p-2 border-b border-border/50 last:border-0 hover:bg-secondary/30 cursor-pointer" onClick={() => handlePointClick(point)}>
+                    <div className="flex items-start gap-2">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: config.color }}>
+                        <config.Icon className="w-3 h-3 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs truncate">{point.texto.slice(0, 60)}...</p>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
+                          <span>@{point.username}</span>
+                          {point.alcaldia && <span>• {point.alcaldia}</span>}
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-muted-foreground hidden sm:inline">{type.label}:</span>
-                    <span className="font-medium">{count}</span>
                   </div>
                 );
               })}
             </div>
-            <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-              <Clock className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Total:</span>
-              <span>{stats?.total || painPoints.length} quejas</span>
+          </div>
+
+          {/* Highest Density Zones Panel */}
+          <div className="absolute top-4 right-4 w-[240px] bg-card/95 border border-border rounded-lg shadow-lg z-[1000] hidden md:block">
+            <div className="flex items-center gap-2 p-3 border-b border-border">
+              <Flame className="h-4 w-4 text-orange-500" />
+              <h3 className="font-semibold text-sm">Zonas Criticas</h3>
             </div>
+            <div className="p-2 space-y-2">
+              {hotspots
+                .sort((a, b) => b.risk_index - a.risk_index)
+                .slice(0, 5)
+                .map((hotspot, index) => (
+                  <div key={hotspot.id} className="flex items-center gap-2 p-2 rounded-lg bg-secondary/30">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                      index === 0 ? 'bg-red-500' : index === 1 ? 'bg-orange-500' : 'bg-yellow-500'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">{hotspot.location_name}</p>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                        <span>Riesgo: {hotspot.risk_index.toFixed(1)}</span>
+                        <span>• {hotspot.estimated_total_reports.toLocaleString()} reportes</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Stats Bar */}
+          <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm py-2 px-4 z-[1000]">
+            <div className="container mx-auto flex items-center justify-between text-sm">
+              <div className="flex items-center gap-4">
+                {painPointTypes.map((type) => {
+                  const count = stats?.por_tipo[type.id] || painPoints.filter((p) => p.tipo === type.id).length;
+                  return (
+                    <div key={type.id} className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: type.color }}>
+                        <type.Icon className="w-3 h-3 text-white" />
+                      </div>
+                      <span className="text-muted-foreground hidden sm:inline">{type.label}:</span>
+                      <span className="font-medium">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                <Clock className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Total:</span>
+                <span>{stats?.total || painPoints.length} quejas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Ad Bar */}
+        <div className="hidden lg:flex w-[160px] flex-col bg-card/50 border-l border-border p-3 gap-3">
+          <div className="h-[250px] bg-secondary/30 rounded-lg flex items-center justify-center border border-dashed border-border">
+            <span className="text-xs text-muted-foreground text-center px-2">Ad 160x250</span>
+          </div>
+          <div className="flex-1 bg-secondary/30 rounded-lg flex items-center justify-center border border-dashed border-border">
+            <span className="text-xs text-muted-foreground writing-vertical">Espacio Publicitario</span>
           </div>
         </div>
       </div>
