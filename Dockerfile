@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (npm install to resolve platform-specific binaries)
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -37,8 +37,8 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (npm install to resolve platform-specific binaries)
+RUN npm install
 
 # Copy source code
 COPY . .
