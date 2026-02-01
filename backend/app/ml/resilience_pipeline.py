@@ -228,7 +228,7 @@ class WaterStressIngestor:
         
         return locations
             
-    def get_vector(self, lat: float, lon: float, timestamp: Optional[datetime] = None) -> Dict[str, Any]:
+    def get_vector(self, lat: float, lon: float, timestamp: Optional[datetime] = None, use_historical_mode: bool = False) -> Dict[str, Any]:
         """
         Generate a complete water stress feature vector for a given location.
         
@@ -236,6 +236,7 @@ class WaterStressIngestor:
             lat: Latitude (-90 to 90)
             lon: Longitude (-180 to 180)
             timestamp: Optional specific time (default: now)
+            use_historical_mode: If True, disables temporal filtering for historical training data
             
         Returns:
             Dictionary containing 15 water stress features (exact schema)
@@ -251,7 +252,7 @@ class WaterStressIngestor:
             hard_sensors = self._fetch_hard_sensors(lat, lon, timestamp)
             
             # --- BLOCK 2: SOFT SENSORS ---
-            soft_sensors = self._fetch_soft_sensors(lat, lon, timestamp)
+            soft_sensors = self._fetch_soft_sensors(lat, lon, timestamp, use_historical_mode=use_historical_mode)
             
             # --- BLOCK 3: SPATIAL & TEMPORAL ---
             context_features = self._fetch_context_features(lat, lon, timestamp)
@@ -585,76 +586,99 @@ class WaterStressIngestor:
         soil_moisture = min(100.0, max(5.0, (total_weighted_precip / 50.0) * 100))
         return round(soil_moisture, 1)
     
-    def _fetch_soft_sensors(self, lat: float, lon: float, timestamp: datetime) -> Dict[str, Any]:
+    def _fetch_soft_sensors(self, lat: float, lon: float, timestamp: datetime, use_historical_mode: bool = False) -> Dict[str, Any]:
         """
-        Fetch social signals from loaded CSV data.
+        Fetch soft sensors (social signals) from CSV Twitter data.
+        
+        Uses scraped tweet data to measure social stress about water issues.
         
         Args:
             lat: Latitude
             lon: Longitude
-            timestamp: Current timestamp to filter recent tweets
+            timestamp: Current timestamp (for real-time predictions)
+            use_historical_mode: If True, disables temporal filtering for historical training data
             
         Returns:
             Dictionary with social_report_count, social_stress_index, 
             leak_mention_flag, sentiment_polarity, most_common_pain_keyword
         """
-        logger.info(f"Fetching soft sensors for {lat}, {lon} at {timestamp}")
+        logger.info(f"Fetching soft sensors for {lat}, {lon} at {timestamp} (historical_mode={use_historical_mode})")
         
         try:
             # Use CSV data if available
             if self.tweets_df is not None and not self.tweets_df.empty:
-                social_data = self._process_csv_tweets(lat, lon, timestamp)
+                social_data = self._process_csv_tweets(lat, lon, timestamp, use_historical_mode=use_historical_mode)
                 return social_data
             else:
-                logger.warning("No CSV data loaded, using synthetic social signals")
-                return self._generate_synthetic_social_signals()
+                logger.warning("No CSV data loaded, using empty social signals")
+                return self._generate_empty_social_signals()
             
         except Exception as e:
             logger.warning(f"Social signal processing failed: {e}")
-            logger.info("Returning synthetic social sensor values")
-            return self._generate_synthetic_social_signals()
+            logger.info("Returning empty social sensor values")
+            return self._generate_empty_social_signals()
+            
+        except Exception as e:
+            logger.warning(f"Social signal processing failed: {e}")
+            logger.info("Returning empty social sensor values")
+            return self._generate_empty_social_signals()
     
-    def _process_csv_tweets(self, lat: float, lon: float, timestamp: datetime) -> Dict[str, Any]:
+    def _process_csv_tweets(self, lat: float, lon: float, timestamp: datetime, use_historical_mode: bool = False) -> Dict[str, Any]:
         """
         Process tweets from loaded CSV data.
         
-        Filters tweets by:
-        1. Time window (last 7 days from timestamp)
-        2. Location relevance (if location mentioned matches coordinates)
+        For historical training data (use_historical_mode=True):
+        - Uses ALL tweets regardless of date
+        - Filters strictly by location mentions
+        
+        For real-time predictions (use_historical_mode=False):
+        - Filters by time window (last 7 days)
+        - Filters by location
         
         Args:
             lat: Latitude
             lon: Longitude
             timestamp: Current timestamp
+            use_historical_mode: If True, uses all historical data for training
             
         Returns:
             Social signal features
         """
         if self.tweets_df is None or self.tweets_df.empty:
-            return self._generate_synthetic_social_signals()
-        
-        # Filter by time window (last 7 days)
-        time_window_start = timestamp - timedelta(days=7)
-        recent_tweets = self.tweets_df[self.tweets_df['created_at'] >= time_window_start]
-        
-        if recent_tweets.empty:
-            logger.info(f"No tweets in last 7 days from {timestamp}, using all available data")
-            recent_tweets = self.tweets_df  # Fall back to all data
+            logger.warning("No tweets dataframe available")
+            return self._generate_empty_social_signals()
         
         # Determine which CDMX area this lat/lon corresponds to
         area = self._get_area_from_coordinates(lat, lon)
         
-        # Filter by area if we can identify it
-        if area:
-            area_tweets = recent_tweets[recent_tweets['locations_mentioned'].apply(
-                lambda x: area in x if isinstance(x, list) else False
-            )]
-            if not area_tweets.empty:
-                recent_tweets = area_tweets
-                logger.info(f"Filtered to {len(recent_tweets)} tweets for area: {area}")
+        if not area:
+            logger.warning(f"Could not identify area for coordinates ({lat}, {lon})")
+            return self._generate_empty_social_signals()
+        
+        # Filter by location - ONLY use tweets that mention this specific area
+        location_tweets = self.tweets_df[self.tweets_df['locations_mentioned'].apply(
+            lambda x: area in x if isinstance(x, list) else False
+        )]
+        
+        if location_tweets.empty:
+            logger.info(f"No tweets mention area: {area}")
+            return self._generate_empty_social_signals()
+        
+        # For real-time mode, also filter by recent dates
+        if not use_historical_mode:
+            time_window_start = timestamp - timedelta(days=7)
+            recent_tweets = location_tweets[location_tweets['created_at'] >= time_window_start]
+            
+            if not recent_tweets.empty:
+                location_tweets = recent_tweets
+                logger.info(f"Using {len(location_tweets)} recent tweets for {area}")
+            else:
+                logger.info(f"No recent tweets for {area}, using all {len(location_tweets)} historical tweets")
+        else:
+            logger.info(f"Historical mode: Using {len(location_tweets)} tweets for {area}")
         
         # Process the tweets
-        return self._analyze_tweets(recent_tweets)
+        return self._analyze_tweets(location_tweets)
     
     def _get_area_from_coordinates(self, lat: float, lon: float) -> Optional[str]:
         """
@@ -699,7 +723,7 @@ class WaterStressIngestor:
             Social signal features
         """
         if tweets_df.empty:
-            return self._generate_synthetic_social_signals()
+            return self._generate_empty_social_signals()
         
         # Count pain keyword occurrences
         keyword_counts = {kw: 0 for kw in self.PAIN_KEYWORDS}
@@ -760,15 +784,14 @@ class WaterStressIngestor:
             'most_common_pain_keyword': most_common_kw
         }
     
-    def _generate_synthetic_social_signals(self) -> Dict[str, Any]:
-        """Generate realistic synthetic social signals for demo purposes."""
-        # Simulate a moderately stressed day
+    def _generate_empty_social_signals(self) -> Dict[str, Any]:
+        """Generate empty social signals when no tweets available for location."""
         return {
-            'social_report_count': random.randint(5, 25),
-            'social_stress_index': round(random.uniform(0.2, 0.6), 2),
-            'leak_mention_flag': random.choice([0, 0, 0, 1]),  # 25% chance
-            'sentiment_polarity': round(random.uniform(-0.5, 0.2), 2),
-            'most_common_pain_keyword': random.choice(['sin agua', 'tandeo', 'fuga de agua'])
+            'social_report_count': 0,
+            'social_stress_index': 0.0,
+            'leak_mention_flag': 0,
+            'sentiment_polarity': 0.0,
+            'most_common_pain_keyword': 'none'
         }
     
     def _fetch_context_features(self, lat: float, lon: float, 
