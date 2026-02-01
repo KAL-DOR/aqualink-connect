@@ -6,6 +6,17 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import 'leaflet.markercluster';
 import { cn } from '@/lib/utils';
+import { Droplet, CircleOff, AlertTriangle, TrendingDown, HelpCircle } from 'lucide-react';
+
+// Ensure markercluster is available on L
+declare global {
+  interface Window {
+    L: typeof L;
+  }
+}
+if (typeof window !== 'undefined') {
+  window.L = L;
+}
 
 // Fix for default marker icons in Leaflet with bundlers
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -31,12 +42,30 @@ interface PainPoint {
   isUserAdded?: boolean;
 }
 
-const painPointConfig: Record<string, { color: string; icon: string; label: string }> = {
-  sin_agua: { color: '#ef4444', icon: '🚱', label: 'Sin agua' },
-  fuga: { color: '#f97316', icon: '💧', label: 'Fuga' },
-  agua_contaminada: { color: '#eab308', icon: '⚠️', label: 'Agua contaminada' },
-  baja_presion: { color: '#3b82f6', icon: '📉', label: 'Baja presión' },
-  otro: { color: '#6b7280', icon: '❓', label: 'Otro' },
+// SVG icons for Leaflet markers (since Leaflet needs HTML strings)
+const svgIcons = {
+  sin_agua: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>`,
+  fuga: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>`,
+  agua_contaminada: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`,
+  baja_presion: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>`,
+  otro: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>`,
+};
+
+// Lucide icon components for React rendering
+const iconComponents = {
+  sin_agua: CircleOff,
+  fuga: Droplet,
+  agua_contaminada: AlertTriangle,
+  baja_presion: TrendingDown,
+  otro: HelpCircle,
+};
+
+const painPointConfig: Record<string, { color: string; label: string }> = {
+  sin_agua: { color: '#ef4444', label: 'Sin agua' },
+  fuga: { color: '#f97316', label: 'Fuga' },
+  agua_contaminada: { color: '#eab308', label: 'Agua contaminada' },
+  baja_presion: { color: '#3b82f6', label: 'Baja presion' },
+  otro: { color: '#6b7280', label: 'Otro' },
 };
 
 interface PainPointMapProps {
@@ -117,10 +146,11 @@ function createClusterIcon(cluster: L.MarkerCluster) {
   });
 }
 
-// Create individual marker icon
-function createMarkerIcon(tipo: string, isHighlighted = false) {
+// Create individual marker icon with SVG
+function createMarkerIcon(tipo: string) {
   const config = painPointConfig[tipo] || painPointConfig.otro;
-  const size = isHighlighted ? 16 : 12;
+  const svg = svgIcons[tipo as keyof typeof svgIcons] || svgIcons.otro;
+  const size = 28;
 
   return L.divIcon({
     html: `
@@ -132,7 +162,10 @@ function createMarkerIcon(tipo: string, isHighlighted = false) {
         border: 2px solid white;
         box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         cursor: pointer;
-      "></div>
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">${svg}</div>
     `,
     className: 'custom-marker-icon',
     iconSize: L.point(size, size),
@@ -206,6 +239,7 @@ export function PainPointMap({
   pendingLocation,
   className,
 }: PainPointMapProps) {
+
   // Create custom icon for pending location
   const pendingIcon = useMemo(() => L.divIcon({
     html: '<div style="background: #1e96fc; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.4); animation: pulse 1.5s infinite;"></div>',
@@ -250,44 +284,45 @@ export function PainPointMap({
       >
         <MapClickHandler onMapClick={onMapClick} />
 
-        {/* OpenStreetMap tiles */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {/* Clustered Pain Points */}
         <ClusterLayer painPoints={painPoints} onPointClick={onPointClick} />
 
-        {/* Pending Location Marker */}
         {pendingLocation && (
           <Marker position={[pendingLocation.lat, pendingLocation.lng]} icon={pendingIcon}>
             <Popup>
-              <div className="text-sm font-medium">Nueva ubicación seleccionada</div>
+              <div className="text-sm font-medium">Nueva ubicacion seleccionada</div>
             </Popup>
           </Marker>
         )}
       </MapContainer>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-card/95 border border-border rounded-lg p-3 text-xs z-[1000]">
+      <div className="absolute bottom-14 left-4 bg-card/95 border border-border rounded-lg p-3 text-xs z-[1100]">
         <div className="font-medium mb-2">Tipos de Problema</div>
         <div className="space-y-1.5">
-          {Object.entries(painPointConfig).filter(([key]) => key !== 'otro').map(([key, config]) => (
-            <div key={key} className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: config.color }}
-              />
-              <span>{config.icon}</span>
-              <span>{config.label}</span>
-            </div>
-          ))}
+          {Object.entries(painPointConfig).filter(([key]) => key !== 'otro').map(([key, config]) => {
+            const IconComponent = iconComponents[key as keyof typeof iconComponents];
+            return (
+              <div key={key} className="flex items-center gap-2">
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: config.color }}
+                >
+                  <IconComponent className="w-3 h-3 text-white" />
+                </div>
+                <span>{config.label}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* Crosshair hint */}
-      <div className="absolute top-4 right-4 bg-card/95 border border-border rounded-lg px-3 py-2 text-xs z-[1000] flex items-center gap-2">
+      <div className="absolute top-4 right-4 bg-card/95 border border-border rounded-lg px-3 py-2 text-xs z-[1100] flex items-center gap-2">
         <div className="w-4 h-4 border-2 border-accent rounded-full flex items-center justify-center">
           <div className="w-1 h-1 bg-accent rounded-full" />
         </div>

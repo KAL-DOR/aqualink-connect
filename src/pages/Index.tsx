@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Droplets, Plus, X, MapPin, AlertTriangle, Clock, ExternalLink } from 'lucide-react';
+import { Droplets, Plus, X, MapPin, AlertTriangle, Clock, ExternalLink, Droplet, CircleOff, TrendingDown, LucideIcon, Moon, Sun } from 'lucide-react';
+import { useTheme } from '@/components/theme-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { PainPointMap } from '@/components/ui/pain-point-map';
@@ -24,16 +25,17 @@ interface Stats {
   por_alcaldia: Record<string, number>;
 }
 
-const API_URL = 'http://localhost:8001/api';
+const API_URL = `http://${window.location.hostname}:8001/api`;
 
-const painPointTypes = [
-  { id: 'sin_agua', label: 'Sin agua', icon: '🚱', color: '#ef4444' },
-  { id: 'fuga', label: 'Fuga', icon: '💧', color: '#f97316' },
-  { id: 'agua_contaminada', label: 'Agua contaminada', icon: '⚠️', color: '#eab308' },
-  { id: 'baja_presion', label: 'Baja presión', icon: '📉', color: '#3b82f6' },
+const painPointTypes: { id: string; label: string; Icon: LucideIcon; color: string }[] = [
+  { id: 'sin_agua', label: 'Sin agua', Icon: CircleOff, color: '#ef4444' },
+  { id: 'fuga', label: 'Fuga', Icon: Droplet, color: '#f97316' },
+  { id: 'agua_contaminada', label: 'Agua contaminada', Icon: AlertTriangle, color: '#eab308' },
+  { id: 'baja_presion', label: 'Baja presion', Icon: TrendingDown, color: '#3b82f6' },
 ];
 
 export default function Index() {
+  const { theme, setTheme } = useTheme();
   const [painPoints, setPainPoints] = useState<PainPoint[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +47,10 @@ export default function Index() {
     type: 'sin_agua',
     description: '',
   });
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
 
   // Fetch data from API
   useEffect(() => {
@@ -177,6 +183,18 @@ export default function Index() {
               <AlertTriangle className="h-4 w-4 text-warning" />
               <span>{stats?.con_ubicacion || painPoints.length} reportes</span>
             </div>
+            <div className="h-4 w-px bg-border" />
+            <button
+              onClick={toggleTheme}
+              className="p-1.5 rounded-lg hover:bg-secondary transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </button>
           </div>
         </div>
       </header>
@@ -212,7 +230,9 @@ export default function Index() {
                 const count = stats?.por_tipo[type.id] || painPoints.filter((p) => p.tipo === type.id).length;
                 return (
                   <div key={type.id} className="flex items-center gap-1.5">
-                    <span>{type.icon}</span>
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: type.color }}>
+                      <type.Icon className="w-3 h-3 text-white" />
+                    </div>
                     <span className="text-muted-foreground hidden sm:inline">{type.label}:</span>
                     <span className="font-medium">{count}</span>
                   </div>
@@ -252,7 +272,9 @@ export default function Index() {
                 <>
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{typeConfig.icon}</span>
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: typeConfig.color }}>
+                        <typeConfig.Icon className="w-4 h-4 text-white" />
+                      </div>
                       <h2 className="font-semibold">{typeConfig.label}</h2>
                     </div>
                     <button onClick={closeModal} className="p-1 hover:bg-secondary rounded-lg">
@@ -331,7 +353,9 @@ export default function Index() {
                                 : 'border-border hover:border-accent/50'
                             }`}
                           >
-                            <span>{type.icon}</span>
+                            <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: type.color }}>
+                              <type.Icon className="w-3.5 h-3.5 text-white" />
+                            </div>
                             <span className="text-xs font-medium">{type.label}</span>
                           </button>
                         ))}
