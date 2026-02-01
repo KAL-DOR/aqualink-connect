@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
-from app.routers import quejas, alertas, predicciones, incidentes
+from app.routers import quejas, alertas, predicciones, incidentes, hotspots
 
 settings = get_settings()
 
@@ -42,3 +42,4 @@ app.include_router(quejas.router, prefix="/api/quejas", tags=["Quejas de Twitter
 app.include_router(alertas.router, prefix="/api/alertas", tags=["Alertas"])
 app.include_router(predicciones.router, prefix="/api/predicciones", tags=["Predicciones ML"])
 app.include_router(incidentes.router, prefix="/api/incidentes", tags=["Incidentes"])
+app.include_router(hotspots.router, prefix="/api/hotspots", tags=["Hotspots/Risk Zones"])
