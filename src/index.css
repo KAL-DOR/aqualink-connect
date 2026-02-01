@@ -3,38 +3,37 @@
 @tailwind utilities;
 
 /* AquaHub Design System - Professional Water Services Platform
-   Inspired by: Linear, Stripe Dashboard, Vercel
-   Colors: Deep navy, clean whites, teal data accents
+   Palette: #23022e (purple) #eef0f2 (gray) #1f271b (dark) #1e96fc (blue) #fffff3 (cream)
 */
 
 @layer base {
   :root {
-    /* Core backgrounds */
-    --background: 210 20% 98%;
-    --foreground: 215 25% 15%;
+    /* Core backgrounds - Cream */
+    --background: 60 100% 97%;
+    --foreground: 100 21% 13%;
 
-    /* Card surfaces */
+    /* Card surfaces - White with slight warmth */
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 100 21% 13%;
 
     /* Popovers and dialogs */
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --popover-foreground: 100 21% 13%;
 
-    /* Primary - Deep Navy */
-    --primary: 215 50% 23%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary - Deep Purple #23022e */
+    --primary: 287 91% 9%;
+    --primary-foreground: 60 100% 97%;
 
-    /* Secondary - Light slate */
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 215 25% 25%;
+    /* Secondary - Light Gray #eef0f2 */
+    --secondary: 210 14% 94%;
+    --secondary-foreground: 100 21% 13%;
 
     /* Muted surfaces */
-    --muted: 210 15% 94%;
-    --muted-foreground: 215 15% 46%;
+    --muted: 210 14% 91%;
+    --muted-foreground: 100 10% 40%;
 
-    /* Accent - Teal for data/charts */
-    --accent: 175 60% 40%;
+    /* Accent - Bright Blue #1e96fc */
+    --accent: 210 97% 55%;
     --accent-foreground: 0 0% 100%;
 
     /* Destructive - Alert red */
@@ -49,55 +48,56 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    /* Water blue for special accents */
-    --water: 200 80% 50%;
+    /* Water - Same as accent for consistency */
+    --water: 210 97% 55%;
     --water-foreground: 0 0% 100%;
 
     /* Borders and inputs */
-    --border: 214 20% 90%;
-    --input: 214 20% 90%;
-    --ring: 215 50% 23%;
+    --border: 210 14% 89%;
+    --input: 210 14% 89%;
+    --ring: 287 91% 9%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
 
-    /* Sidebar */
-    --sidebar-background: 215 50% 18%;
-    --sidebar-foreground: 210 40% 90%;
-    --sidebar-primary: 175 60% 50%;
+    /* Sidebar - Deep Purple */
+    --sidebar-background: 287 91% 9%;
+    --sidebar-foreground: 60 100% 97%;
+    --sidebar-primary: 210 97% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 45% 25%;
-    --sidebar-accent-foreground: 210 40% 95%;
-    --sidebar-border: 215 40% 25%;
-    --sidebar-ring: 175 60% 50%;
+    --sidebar-accent: 287 70% 15%;
+    --sidebar-accent-foreground: 60 100% 97%;
+    --sidebar-border: 287 60% 15%;
+    --sidebar-ring: 210 97% 55%;
 
     /* Chart colors */
-    --chart-1: 175 60% 45%;
-    --chart-2: 200 80% 50%;
-    --chart-3: 215 50% 40%;
+    --chart-1: 210 97% 55%;
+    --chart-2: 287 91% 25%;
+    --chart-3: 142 71% 45%;
     --chart-4: 38 92% 50%;
     --chart-5: 0 72% 51%;
   }
 
   .dark {
-    --background: 215 50% 8%;
-    --foreground: 210 40% 98%;
+    /* Dark mode - Dark green base #1f271b */
+    --background: 100 21% 8%;
+    --foreground: 60 100% 97%;
 
-    --card: 215 45% 12%;
-    --card-foreground: 210 40% 98%;
+    --card: 100 21% 12%;
+    --card-foreground: 60 100% 97%;
 
-    --popover: 215 45% 12%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 100 21% 12%;
+    --popover-foreground: 60 100% 97%;
 
-    --primary: 175 60% 50%;
-    --primary-foreground: 215 50% 10%;
+    --primary: 210 97% 55%;
+    --primary-foreground: 100 21% 8%;
 
-    --secondary: 215 40% 18%;
-    --secondary-foreground: 210 40% 90%;
+    --secondary: 100 15% 18%;
+    --secondary-foreground: 60 100% 97%;
 
-    --muted: 215 35% 20%;
-    --muted-foreground: 215 20% 60%;
+    --muted: 100 12% 20%;
+    --muted-foreground: 60 20% 65%;
 
-    --accent: 175 60% 45%;
+    --accent: 210 97% 55%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62% 50%;
@@ -109,21 +109,21 @@
     --warning: 38 80% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --water: 200 70% 55%;
+    --water: 210 97% 60%;
     --water-foreground: 0 0% 100%;
 
-    --border: 215 35% 22%;
-    --input: 215 35% 22%;
-    --ring: 175 60% 50%;
+    --border: 100 15% 20%;
+    --input: 100 15% 20%;
+    --ring: 210 97% 55%;
 
-    --sidebar-background: 215 50% 6%;
-    --sidebar-foreground: 210 40% 90%;
-    --sidebar-primary: 175 60% 50%;
+    --sidebar-background: 100 21% 6%;
+    --sidebar-foreground: 60 100% 97%;
+    --sidebar-primary: 210 97% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 45% 15%;
-    --sidebar-accent-foreground: 210 40% 95%;
-    --sidebar-border: 215 40% 15%;
-    --sidebar-ring: 175 60% 50%;
+    --sidebar-accent: 100 15% 15%;
+    --sidebar-accent-foreground: 60 100% 97%;
+    --sidebar-border: 100 15% 15%;
+    --sidebar-ring: 210 97% 55%;
   }
 }
 

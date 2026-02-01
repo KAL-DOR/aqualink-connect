@@ -7,7 +7,7 @@ services:
       target: development
     container_name: aquahub-frontend
     ports:
-      - "8080:8080"
+      - "3000:8080"
     volumes:
       - .:/app
       - /app/node_modules
@@ -25,15 +25,14 @@ services:
       dockerfile: Dockerfile
     container_name: aquahub-api
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - ./backend:/app
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      - DATABASE_URL=postgresql://aquahub:aquahub_secret@db:5432/aquahub
-      - DEBUG=true
+    env_file:
+      - ./backend/.env
     networks:
       - aquahub-network
 
@@ -42,7 +41,7 @@ services:
     image: postgres:16-alpine
     container_name: aquahub-db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_USER: aquahub
       POSTGRES_PASSWORD: aquahub_secret

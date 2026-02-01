@@ -195,7 +195,7 @@ function DemandBar({ zone, requests, percentage, intensity }: DemandBarProps) {
   const intensityColors = {
     low: 'bg-success',
     medium: 'bg-warning',
-    high: 'bg-chart-5',
+    high: 'bg-orange-500',
     critical: 'bg-destructive',
   };
 

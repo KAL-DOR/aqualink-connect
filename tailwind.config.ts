@@ -108,6 +108,14 @@ export default {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
         },
+        spotlight: {
+          "0%": { opacity: "0", transform: "translate(-72%, -62%) scale(0.5)" },
+          "100%": { opacity: "1", transform: "translate(-50%, -40%) scale(1)" },
+        },
+        shimmer: {
+          from: { backgroundPosition: "0 0" },
+          to: { backgroundPosition: "-200% 0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -115,6 +123,8 @@ export default {
         "fade-in": "fade-in 0.3s ease-out",
         "slide-in-right": "slide-in-right 0.3s ease-out",
         pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        spotlight: "spotlight 2s ease 0.75s 1 forwards",
+        shimmer: "shimmer 2s linear infinite",
       },
       fontFamily: {
         sans: [

@@ -15,10 +15,10 @@ interface StatCardProps {
 
 const variantStyles = {
   default: 'bg-card border-border',
-  accent: 'bg-accent/10 border-accent/20',
-  warning: 'bg-warning/10 border-warning/20',
-  success: 'bg-success/10 border-success/20',
-  destructive: 'bg-destructive/10 border-destructive/20',
+  accent: 'bg-card border-border',
+  warning: 'bg-card border-border',
+  success: 'bg-card border-border',
+  destructive: 'bg-card border-border',
 };
 
 const iconStyles = {
