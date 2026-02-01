@@ -15,11 +15,11 @@ Base = declarative_base()
 import enum
 
 class TipoQueja(str, enum.Enum):
-    SIN_AGUA = "sin_agua"
-    FUGA = "fuga"
-    AGUA_CONTAMINADA = "agua_contaminada"
-    BAJA_PRESION = "baja_presion"
-    OTRO = "otro"
+    sin_agua = "sin_agua"
+    fuga = "fuga"
+    agua_contaminada = "agua_contaminada"
+    baja_presion = "baja_presion"
+    otro = "otro"
 
 from sqlalchemy import Column, Integer, String, DateTime, Float, Boolean, Text, Enum
 from sqlalchemy.sql import func
@@ -30,7 +30,7 @@ class Queja(Base):
     id = Column(Integer, primary_key=True, index=True)
     tweet_id = Column(String(50), unique=True, index=True)
     texto = Column(Text, nullable=False)
-    tipo = Column(Enum(TipoQueja), default=TipoQueja.OTRO)
+    tipo = Column(Enum(TipoQueja), default=TipoQueja.otro)
     username = Column(String(100))
     user_name = Column(String(200))
     user_followers = Column(Integer, default=0)
@@ -96,20 +96,20 @@ LOCATIONS = {
 
 # Keywords for classification
 TYPE_KEYWORDS = {
-    TipoQueja.SIN_AGUA: [
+    TipoQueja.sin_agua: [
         'sin agua', 'no hay agua', 'no tengo agua', 'no tenemos agua',
         'falta de agua', 'corte de agua', 'no llega agua', 'desabasto',
         'no cae agua', 'sin suministro', 'no sube el agua'
     ],
-    TipoQueja.FUGA: [
+    TipoQueja.fuga: [
         'fuga', 'fuga de agua', 'tubería rota', 'se rompió',
         'derrame', 'desperdicio', 'borbotón', 'agua corriendo'
     ],
-    TipoQueja.AGUA_CONTAMINADA: [
+    TipoQueja.agua_contaminada: [
         'agua sucia', 'contaminada', 'agua café', 'agua amarilla',
         'mal olor', 'turbia', 'no potable', 'contaminación'
     ],
-    TipoQueja.BAJA_PRESION: [
+    TipoQueja.baja_presion: [
         'baja presión', 'poca presión', 'sin presión', 'apenas sale',
         'gotea', 'sale poquita', 'presión baja', 'bajo suministro'
     ],
@@ -149,9 +149,9 @@ def classify_type(text: str) -> TipoQueja:
 
     # Default to SIN_AGUA if mentions SACMEX/SEGIAGUA
     if 'sacmex' in text_lower or 'segiagua' in text_lower:
-        return TipoQueja.SIN_AGUA
+        return TipoQueja.sin_agua
 
-    return TipoQueja.OTRO
+    return TipoQueja.otro
 
 
 def parse_twitter_date(date_str: str) -> datetime:
