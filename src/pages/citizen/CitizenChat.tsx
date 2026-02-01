@@ -1,16 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  Send, 
+import {
+  Send,
   ArrowLeft,
   Droplets,
-  MapPin,
-  Phone,
-  Star,
-  Clock,
   CheckCheck,
-  Truck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,11 +13,11 @@ import { ChatMessage, PipaProvider } from '@/types';
 import { mockProviders } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 
-type ChatState = 
-  | 'welcome' 
-  | 'main_menu' 
-  | 'request_location' 
-  | 'show_providers' 
+type ChatState =
+  | 'welcome'
+  | 'main_menu'
+  | 'request_location'
+  | 'show_providers'
   | 'confirm_order'
   | 'order_confirmed'
   | 'report_type'
@@ -74,7 +69,6 @@ export default function CitizenChat() {
   }, [messages]);
 
   useEffect(() => {
-    // Initial greeting
     setTimeout(() => {
       addBotMessage('¡Hola! 👋 Soy AquaHub, tu asistente de servicios de agua.');
       setTimeout(() => {
@@ -113,7 +107,7 @@ export default function CitizenChat() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
-    
+
     addUserMessage(inputValue);
     processUserInput(inputValue);
     setInputValue('');
@@ -261,7 +255,7 @@ export default function CitizenChat() {
   const showProviders = () => {
     const availableProviders = mockProviders.filter(p => p.available);
     let message = `Encontré ${availableProviders.length} pipas disponibles en tu zona:\n\n`;
-    
+
     availableProviders.forEach((provider, idx) => {
       message += `${idx + 1}️⃣ ${provider.name}\n`;
       message += `   💰 $${provider.pricePerLiter}/10,000L ⭐${provider.rating}\n`;
@@ -269,37 +263,37 @@ export default function CitizenChat() {
     });
 
     message += '💳 Tienes un subsidio disponible de $200\n\n¿Cuál prefieres? Responde con el número.';
-    
+
     addBotMessage(message);
     setChatState('show_providers');
   };
 
   return (
-    <div className="min-h-screen bg-[#0b141a] flex flex-col">
+    <div className="min-h-screen bg-primary flex flex-col">
       {/* Header */}
-      <header className="bg-[#1f2c34] border-b border-[#2a373f] px-4 py-3 flex items-center gap-3">
-        <Link to="/" className="text-[#00a884] hover:text-[#00c896]">
+      <header className="bg-primary border-b border-primary-foreground/10 px-4 py-3 flex items-center gap-3">
+        <Link to="/" className="text-accent hover:text-accent/80">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <div className="w-10 h-10 bg-[#00a884] rounded-full flex items-center justify-center">
+        <div className="w-10 h-10 bg-accent rounded-full flex items-center justify-center">
           <Droplets className="h-5 w-5 text-white" />
         </div>
         <div className="flex-1">
-          <h1 className="text-white font-medium">AquaHub</h1>
-          <p className="text-xs text-[#8696a0]">Bot de Servicios de Agua</p>
+          <h1 className="text-primary-foreground font-medium">AquaHub</h1>
+          <p className="text-xs text-primary-foreground/60">Bot de Servicios de Agua</p>
         </div>
         <div className="flex items-center gap-3">
-          <Link to="/government" className="text-xs text-[#8696a0] hover:text-white transition-colors">
+          <Link to="/government" className="text-xs text-primary-foreground/60 hover:text-primary-foreground transition-colors">
             Dashboard Gobierno
           </Link>
-          <Link to="/company" className="text-xs text-[#8696a0] hover:text-white transition-colors">
+          <Link to="/company" className="text-xs text-primary-foreground/60 hover:text-primary-foreground transition-colors">
             Dashboard Empresa
           </Link>
         </div>
       </header>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.02"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}>
+      <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin bg-primary/95">
         <AnimatePresence>
           {messages.map((message) => (
             <motion.div
@@ -313,12 +307,12 @@ export default function CitizenChat() {
             >
               <div className={cn(
                 "max-w-[85%] rounded-lg px-3 py-2 shadow-sm",
-                message.role === 'user' 
-                  ? "bg-[#005c4b] text-white rounded-br-sm" 
-                  : "bg-[#1f2c34] text-[#e9edef] rounded-bl-sm"
+                message.role === 'user'
+                  ? "bg-accent text-accent-foreground rounded-br-sm"
+                  : "bg-card text-card-foreground rounded-bl-sm"
               )}>
                 <p className="text-sm whitespace-pre-line">{message.content}</p>
-                
+
                 {/* Options */}
                 {message.options && message.options.length > 0 && (
                   <div className="mt-3 space-y-2">
@@ -326,20 +320,20 @@ export default function CitizenChat() {
                       <button
                         key={option.id}
                         onClick={() => handleOptionClick(option.id, option.label)}
-                        className="w-full text-left px-3 py-2 bg-[#2a373f] hover:bg-[#3b4a54] rounded-lg text-sm text-[#00a884] transition-colors"
+                        className="w-full text-left px-3 py-2 bg-secondary hover:bg-secondary/80 rounded-lg text-sm text-accent transition-colors"
                       >
                         {option.label}
                       </button>
                     ))}
                   </div>
                 )}
-                
+
                 <div className="flex items-center justify-end gap-1 mt-1">
-                  <span className="text-[10px] text-[#8696a0]">
+                  <span className="text-[10px] opacity-60">
                     {message.timestamp.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                   {message.role === 'user' && (
-                    <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" />
+                    <CheckCheck className="h-3.5 w-3.5 text-accent-foreground/70" />
                   )}
                 </div>
               </div>
@@ -350,18 +344,18 @@ export default function CitizenChat() {
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-3 bg-[#1f2c34] border-t border-[#2a373f]">
+      <form onSubmit={handleSubmit} className="p-3 bg-primary border-t border-primary-foreground/10">
         <div className="flex items-center gap-2">
           <Input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Escribe un mensaje..."
-            className="flex-1 bg-[#2a373f] border-0 text-white placeholder:text-[#8696a0] focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="flex-1 bg-card border-border text-foreground placeholder:text-muted-foreground"
           />
-          <Button 
-            type="submit" 
-            size="icon" 
-            className="bg-[#00a884] hover:bg-[#00c896] rounded-full"
+          <Button
+            type="submit"
+            size="icon"
+            className="bg-accent hover:bg-accent/90 rounded-full"
           >
             <Send className="h-4 w-4" />
           </Button>
