@@ -1,74 +1,98 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Droplets, Plus, X, MapPin, AlertTriangle, Clock } from 'lucide-react';
+import { Droplets, Plus, X, MapPin, AlertTriangle, Clock, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { PainPointMap } from '@/components/ui/pain-point-map';
 
 interface PainPoint {
-  id: string;
+  id: number;
   lat: number;
   lng: number;
-  type: 'no_water' | 'leak' | 'contamination' | 'low_pressure';
-  description: string;
-  createdAt: Date;
+  tipo: string;
+  texto: string;
+  username: string;
+  alcaldia: string | null;
+  created_at: string;
+  isUserAdded?: boolean;
 }
 
+interface Stats {
+  total: number;
+  con_ubicacion: number;
+  por_tipo: Record<string, number>;
+  por_alcaldia: Record<string, number>;
+}
+
+const API_URL = 'http://localhost:8001/api';
+
 const painPointTypes = [
-  { id: 'no_water', label: 'Sin agua', icon: '🚱', color: '#ef4444' },
-  { id: 'leak', label: 'Fuga', icon: '💧', color: '#f97316' },
-  { id: 'contamination', label: 'Agua contaminada', icon: '⚠️', color: '#eab308' },
-  { id: 'low_pressure', label: 'Baja presión', icon: '📉', color: '#3b82f6' },
+  { id: 'sin_agua', label: 'Sin agua', icon: '🚱', color: '#ef4444' },
+  { id: 'fuga', label: 'Fuga', icon: '💧', color: '#f97316' },
+  { id: 'agua_contaminada', label: 'Agua contaminada', icon: '⚠️', color: '#eab308' },
+  { id: 'baja_presion', label: 'Baja presión', icon: '📉', color: '#3b82f6' },
 ];
 
 export default function Index() {
   const [painPoints, setPainPoints] = useState<PainPoint[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedPoint, setSelectedPoint] = useState<PainPoint | null>(null);
+  const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
   const [formData, setFormData] = useState({
-    type: 'no_water' as PainPoint['type'],
+    type: 'sin_agua',
     description: '',
   });
 
-  const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
-  const [mapRef, setMapRef] = useState<any>(null);
+  // Fetch data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [mapRes, statsRes] = await Promise.all([
+          fetch(`${API_URL}/quejas/mapa?limit=1500`),
+          fetch(`${API_URL}/quejas/estadisticas`)
+        ]);
 
-  const handleMapClick = (lat: number, lng: number, event?: { clientX: number; clientY: number }, map?: any) => {
+        if (mapRes.ok) {
+          const mapData = await mapRes.json();
+          setPainPoints(mapData.puntos);
+        }
+
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          setStats(statsData);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleMapClick = (lat: number, lng: number, event?: { clientX: number; clientY: number }) => {
     setSelectedLocation({ lat, lng });
-    if (map) {
-      setMapRef(map);
-    }
+    setSelectedPoint(null);
     if (event) {
       const modalWidth = 340;
       const modalHeight = 380;
       const padding = 16;
       const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
 
       let x = event.clientX + padding;
       let y = event.clientY - modalHeight / 2;
 
-      // Check if modal fits on the right
-      const fitsRight = x + modalWidth < viewportWidth - padding;
-      // Check if modal fits on the left
-      const fitsLeft = event.clientX - modalWidth - padding > padding;
-
-      if (!fitsRight && fitsLeft) {
-        // Put on left side
+      if (x + modalWidth > viewportWidth - padding) {
         x = event.clientX - modalWidth - padding;
-      } else if (!fitsRight && !fitsLeft && map) {
-        // No space on either side - pan the map to make room
-        const offsetLng = 0.05; // Pan map to the right
-        map.panTo([lat, lng - offsetLng], { animate: true });
-        x = viewportWidth / 2 + padding;
-        y = viewportHeight / 2 - modalHeight / 2;
       }
-
-      // Vertical bounds
-      if (y < padding + 80) y = padding + 80; // Account for header
-      if (y + modalHeight > viewportHeight - padding - 50) {
-        y = viewportHeight - modalHeight - padding - 50; // Account for stats bar
+      if (x < padding) x = padding;
+      if (y < padding + 80) y = padding + 80;
+      if (y + modalHeight > window.innerHeight - padding - 50) {
+        y = window.innerHeight - modalHeight - padding - 50;
       }
 
       setClickPosition({ x, y });
@@ -76,20 +100,26 @@ export default function Index() {
     setIsModalOpen(true);
   };
 
-  // Get modal position style
-  const getModalStyle = (): React.CSSProperties => {
-    if (!clickPosition) {
-      return {
-        left: '50%',
-        top: '50%',
-        transform: 'translate(-50%, -50%)',
-      };
-    }
+  const handlePointClick = (point: PainPoint, event?: { clientX: number; clientY: number }) => {
+    setSelectedPoint(point);
+    setSelectedLocation(null);
+    if (event) {
+      const modalWidth = 340;
+      const padding = 16;
+      const viewportWidth = window.innerWidth;
 
-    return {
-      left: clickPosition.x,
-      top: clickPosition.y,
-    };
+      let x = event.clientX + padding;
+      let y = event.clientY - 150;
+
+      if (x + modalWidth > viewportWidth - padding) {
+        x = event.clientX - modalWidth - padding;
+      }
+      if (x < padding) x = padding;
+      if (y < padding + 80) y = padding + 80;
+
+      setClickPosition({ x, y });
+    }
+    setIsModalOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -97,25 +127,36 @@ export default function Index() {
     if (!selectedLocation) return;
 
     const newPoint: PainPoint = {
-      id: Date.now().toString(),
+      id: Date.now(),
       lat: selectedLocation.lat,
       lng: selectedLocation.lng,
-      type: formData.type,
-      description: formData.description,
-      createdAt: new Date(),
+      tipo: formData.type,
+      texto: formData.description || 'Reporte de usuario',
+      username: 'usuario_anonimo',
+      alcaldia: null,
+      created_at: new Date().toISOString(),
+      isUserAdded: true,
     };
 
-    setPainPoints([...painPoints, newPoint]);
-    setIsModalOpen(false);
-    setSelectedLocation(null);
-    setFormData({ type: 'no_water', description: '' });
+    setPainPoints([newPoint, ...painPoints]);
+    closeModal();
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedLocation(null);
-    setFormData({ type: 'no_water', description: '' });
+    setSelectedPoint(null);
+    setFormData({ type: 'sin_agua', description: '' });
   };
+
+  const getModalStyle = (): React.CSSProperties => {
+    if (!clickPosition) {
+      return { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' };
+    }
+    return { left: clickPosition.x, top: clickPosition.y };
+  };
+
+  const typeConfig = painPointTypes.find(t => t.id === selectedPoint?.tipo) || painPointTypes[0];
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
@@ -134,7 +175,7 @@ export default function Index() {
             <div className="h-4 w-px bg-border" />
             <div className="flex items-center gap-1.5">
               <AlertTriangle className="h-4 w-4 text-warning" />
-              <span>{painPoints.length} reportes</span>
+              <span>{stats?.con_ubicacion || painPoints.length} reportes</span>
             </div>
           </div>
         </div>
@@ -146,22 +187,29 @@ export default function Index() {
         <span className="text-muted-foreground"> para reportar un problema de agua en tu zona</span>
       </div>
 
-      {/* Map Container - Full remaining height */}
+      {/* Map Container */}
       <div className="flex-1 relative">
         <div className="absolute inset-0">
-          <PainPointMap
-            painPoints={painPoints}
-            onMapClick={handleMapClick}
-            pendingLocation={selectedLocation}
-          />
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-muted-foreground">Cargando datos...</div>
+            </div>
+          ) : (
+            <PainPointMap
+              painPoints={painPoints}
+              onMapClick={handleMapClick}
+              onPointClick={handlePointClick}
+              pendingLocation={selectedLocation}
+            />
+          )}
         </div>
 
-        {/* Stats Bar - Floating at bottom */}
+        {/* Stats Bar */}
         <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm py-2 px-4 z-[1000]">
           <div className="container mx-auto flex items-center justify-between text-sm">
             <div className="flex items-center gap-4">
               {painPointTypes.map((type) => {
-                const count = painPoints.filter((p) => p.type === type.id).length;
+                const count = stats?.por_tipo[type.id] || painPoints.filter((p) => p.tipo === type.id).length;
                 return (
                   <div key={type.id} className="flex items-center gap-1.5">
                     <span>{type.icon}</span>
@@ -173,8 +221,8 @@ export default function Index() {
             </div>
             <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
               <Clock className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Última actualización:</span>
-              <span>ahora</span>
+              <span className="hidden sm:inline">Total:</span>
+              <span>{stats?.total || painPoints.length} quejas</span>
             </div>
           </div>
         </div>
@@ -184,7 +232,6 @@ export default function Index() {
       <AnimatePresence>
         {isModalOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -193,7 +240,6 @@ export default function Index() {
               className="fixed inset-0 bg-black/50 z-[1002]"
             />
 
-            {/* Modal Content */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -201,66 +247,115 @@ export default function Index() {
               style={getModalStyle()}
               className="fixed w-[340px] bg-card border border-border rounded-xl shadow-2xl z-[1003] p-4"
             >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Reportar Problema</h2>
-                <button
-                  onClick={closeModal}
-                  className="p-1 hover:bg-secondary rounded-lg transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Location Preview */}
-                <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg text-xs">
-                  <MapPin className="h-3.5 w-3.5 text-accent" />
-                  <span className="text-muted-foreground">Ubicación:</span>
-                  <span className="font-mono">
-                    {selectedLocation?.lat.toFixed(4)}, {selectedLocation?.lng.toFixed(4)}
-                  </span>
-                </div>
-
-                {/* Problem Type */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Tipo de problema</label>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {painPointTypes.map((type) => (
-                      <button
-                        key={type.id}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, type: type.id as PainPoint['type'] })}
-                        className={`flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left ${
-                          formData.type === type.id
-                            ? 'border-accent bg-accent/10 text-accent'
-                            : 'border-border hover:border-accent/50'
-                        }`}
-                      >
-                        <span>{type.icon}</span>
-                        <span className="text-xs font-medium">{type.label}</span>
-                      </button>
-                    ))}
+              {/* View existing complaint */}
+              {selectedPoint && (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{typeConfig.icon}</span>
+                      <h2 className="font-semibold">{typeConfig.label}</h2>
+                    </div>
+                    <button onClick={closeModal} className="p-1 hover:bg-secondary rounded-lg">
+                      <X className="h-5 w-5" />
+                    </button>
                   </div>
-                </div>
 
-                {/* Description */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Descripción (opcional)</label>
-                  <Textarea
-                    placeholder="Describe el problema..."
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={2}
-                    className="resize-none text-sm"
-                  />
-                </div>
+                  <div className="space-y-3">
+                    <p className="text-sm">{selectedPoint.texto}</p>
 
-                {/* Submit */}
-                <Button type="submit" className="w-full gap-2 mt-2">
-                  <Plus className="h-4 w-4" />
-                  Agregar Reporte
-                </Button>
-              </form>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>@{selectedPoint.username}</span>
+                      {selectedPoint.alcaldia && (
+                        <>
+                          <span>•</span>
+                          <span>{selectedPoint.alcaldia}</span>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(selectedPoint.created_at).toLocaleDateString('es-MX', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+
+                    {!selectedPoint.isUserAdded && (
+                      <a
+                        href={`https://twitter.com/${selectedPoint.username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs text-accent hover:underline"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Ver en Twitter
+                      </a>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* Add new complaint */}
+              {selectedLocation && !selectedPoint && (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold">Reportar Problema</h2>
+                    <button onClick={closeModal} className="p-1 hover:bg-secondary rounded-lg">
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg text-xs">
+                      <MapPin className="h-3.5 w-3.5 text-accent" />
+                      <span className="text-muted-foreground">Ubicación:</span>
+                      <span className="font-mono">
+                        {selectedLocation.lat.toFixed(4)}, {selectedLocation.lng.toFixed(4)}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">Tipo de problema</label>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {painPointTypes.map((type) => (
+                          <button
+                            key={type.id}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, type: type.id })}
+                            className={`flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left ${
+                              formData.type === type.id
+                                ? 'border-accent bg-accent/10 text-accent'
+                                : 'border-border hover:border-accent/50'
+                            }`}
+                          >
+                            <span>{type.icon}</span>
+                            <span className="text-xs font-medium">{type.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">Descripción (opcional)</label>
+                      <Textarea
+                        placeholder="Describe el problema..."
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        rows={2}
+                        className="resize-none text-sm"
+                      />
+                    </div>
+
+                    <Button type="submit" className="w-full gap-2 mt-2">
+                      <Plus className="h-4 w-4" />
+                      Agregar Reporte
+                    </Button>
+                  </form>
+                </>
+              )}
             </motion.div>
           </>
         )}

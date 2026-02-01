@@ -1,3 +1,3 @@
-from app.routers import proveedores, pedidos, incidentes, alertas, predicciones
+from app.routers import quejas, alertas, predicciones, incidentes
 
-__all__ = ["proveedores", "pedidos", "incidentes", "alertas", "predicciones"]
+__all__ = ["quejas", "alertas", "predicciones", "incidentes"]
