@@ -47,7 +47,6 @@ class Queja(Base):
     is_reply = Column(Boolean, default=False)
     in_reply_to = Column(String(100), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
 # Database URL (use 'db' for Docker network, 'localhost:5433' for local)
 import os
