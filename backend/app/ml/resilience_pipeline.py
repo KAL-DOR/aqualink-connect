@@ -318,39 +318,83 @@ class WaterStressIngestor:
             return []
         
         try:
-            # OpenWeather OneCall API (requires subscription for historical)
-            # For free tier, we use Current + 5-day forecast + synthetic history
-            url = "https://api.openweathermap.org/data/3.0/onecall"
-            params = {
-                'lat': lat,
-                'lon': lon,
-                'exclude': 'minutely,hourly,alerts',
-                'units': 'metric',
-                'appid': self.openweather_key
-            }
+            # OpenWeather API - FREE TIER (2.5)
+            # One Call 3.0 requires paid subscription, so we use the free Current Weather API
+            # Plus 5-day forecast API (both free with valid key)
             
-            response = requests.get(url, params=params, timeout=10)
+            # 1. Get current weather (free)
+            current_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&units=metric&appid={self.openweather_key}"
+            logger.info(f"Fetching OpenWeather Current: lat={lat}, lon={lon}")
+            current_response = requests.get(current_url, timeout=10)
             
-            if response.status_code != 200:
-                logger.warning(f"OpenWeather API error: {response.status_code}")
+            if current_response.status_code != 200:
+                logger.warning(f"OpenWeather API error: {current_response.status_code} - {current_response.text[:100]}")
                 return []
             
-            data = response.json()
+            current_data = current_response.json()
+            logger.info(f"✓ OpenWeather Current API success: {current_data.get('name', 'Unknown')}")
+            
+            # 2. Get 5-day forecast (free) - provides 3-hour intervals, we'll aggregate to daily
+            forecast_url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&units=metric&appid={self.openweather_key}"
+            logger.info(f"Fetching OpenWeather Forecast...")
+            forecast_response = requests.get(forecast_url, timeout=10)
+            
             daily_records = []
             
-            # Process daily data (includes today + 7 days forecast for free tier)
-            if 'daily' in data:
-                for day in data['daily']:
-                    record = {
-                        'date': datetime.fromtimestamp(day['dt']),
-                        'precipitation': day.get('rain', 0) + day.get('snow', 0),
-                        'temp_max': day['temp']['max'],
-                        'temp_min': day['temp']['min'],
-                        'humidity': day['humidity']
-                    }
-                    daily_records.append(record)
+            # Process current weather as "today"
+            today = datetime.now()
+            current_record = {
+                'date': today,
+                'precipitation': current_data.get('rain', {}).get('1h', 0) + current_data.get('snow', {}).get('1h', 0),
+                'temp_max': current_data['main']['temp_max'],
+                'temp_min': current_data['main']['temp_min'],
+                'humidity': current_data['main']['humidity']
+            }
+            daily_records.append(current_record)
             
-            # For demo/development: Pad with synthetic historical data to reach 30 days
+            # Process forecast data (aggregate 3-hour intervals to daily)
+            if forecast_response.status_code == 200:
+                forecast_data = forecast_response.json()
+                forecast_list = forecast_data.get('list', [])
+                
+                # Group by date
+                from collections import defaultdict
+                daily_forecast = defaultdict(lambda: {'temps': [], 'precip': 0, 'humidity': []})
+                
+                for item in forecast_list:
+                    date = datetime.fromtimestamp(item['dt']).date()
+                    daily_forecast[date]['temps'].append(item['main']['temp'])
+                    daily_forecast[date]['precip'] += item.get('rain', {}).get('3h', 0) + item.get('snow', {}).get('3h', 0)
+                    daily_forecast[date]['humidity'].append(item['main']['humidity'])
+                
+                # Convert to records
+                for date, data in daily_forecast.items():
+                    if data['temps']:  # Only add if we have data
+                        record = {
+                            'date': datetime.combine(date, datetime.min.time()),
+                            'precipitation': data['precip'],
+                            'temp_max': max(data['temps']),
+                            'temp_min': min(data['temps']),
+                            'humidity': sum(data['humidity']) / len(data['humidity'])
+                        }
+                        daily_records.append(record)
+                
+                logger.info(f"✓ OpenWeather Forecast API: {len(daily_forecast)} days")
+            else:
+                logger.warning(f"Forecast API failed: {forecast_response.status_code}")
+            
+            # Sort by date and remove duplicates
+            daily_records = sorted(daily_records, key=lambda x: x['date'])
+            seen_dates = set()
+            unique_records = []
+            for record in daily_records:
+                date_key = record['date'].date()
+                if date_key not in seen_dates:
+                    seen_dates.add(date_key)
+                    unique_records.append(record)
+            daily_records = unique_records
+            
+            # Pad with synthetic historical data to reach 30 days
             if len(daily_records) < 30:
                 synthetic_start = daily_records[0]['date'] - timedelta(days=(30 - len(daily_records))) if daily_records else datetime.now() - timedelta(days=30)
                 synthetic_days = self._generate_synthetic_weather_history(synthetic_start, days=30-len(daily_records))
