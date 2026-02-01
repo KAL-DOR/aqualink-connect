@@ -3,10 +3,10 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json ./
+# Copy package.json only
+COPY package.json ./
 
-# Install dependencies (npm install to resolve platform-specific binaries)
+# Install dependencies fresh for this platform
 RUN npm install
 
 # Copy source code
@@ -34,10 +34,10 @@ FROM node:20-alpine AS development
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json ./
+# Copy package.json only
+COPY package.json ./
 
-# Install dependencies (npm install to resolve platform-specific binaries)
+# Install dependencies fresh for this platform
 RUN npm install
 
 # Copy source code
