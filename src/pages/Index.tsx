@@ -25,11 +25,18 @@ interface Stats {
   por_alcaldia: Record<string, number>;
 }
 
-<<<<<<< Updated upstream
+interface Hotspot {
+  id: number;
+  cluster_label: number;
+  lat: number;
+  lon: number;
+  risk_index: number;
+  location_name: string;
+  sampled_reports: number;
+  estimated_total_reports: number;
+}
+
 const API_URL = `http://${window.location.hostname}:8001/api`;
-=======
-const API_URL = 'http://localhost:8000/api';
->>>>>>> Stashed changes
 
 const painPointTypes: { id: string; label: string; Icon: LucideIcon; color: string }[] = [
   { id: 'sin_agua', label: 'Sin agua', Icon: CircleOff, color: '#ef4444' },
@@ -41,6 +48,7 @@ const painPointTypes: { id: string; label: string; Icon: LucideIcon; color: stri
 export default function Index() {
   const { theme, setTheme } = useTheme();
   const [painPoints, setPainPoints] = useState<PainPoint[]>([]);
+  const [hotspots, setHotspots] = useState<Hotspot[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,9 +68,10 @@ export default function Index() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [mapRes, statsRes] = await Promise.all([
+        const [mapRes, statsRes, hotspotsRes] = await Promise.all([
           fetch(`${API_URL}/quejas/mapa?limit=1500`),
-          fetch(`${API_URL}/quejas/estadisticas`)
+          fetch(`${API_URL}/quejas/estadisticas`),
+          fetch(`${API_URL}/hotspots`)
         ]);
 
         if (mapRes.ok) {
@@ -73,6 +82,11 @@ export default function Index() {
         if (statsRes.ok) {
           const statsData = await statsRes.json();
           setStats(statsData);
+        }
+
+        if (hotspotsRes.ok) {
+          const hotspotsData = await hotspotsRes.json();
+          setHotspots(hotspotsData.hotspots);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -219,6 +233,7 @@ export default function Index() {
           ) : (
             <PainPointMap
               painPoints={painPoints}
+              hotspots={hotspots}
               onMapClick={handleMapClick}
               onPointClick={handlePointClick}
               pendingLocation={selectedLocation}

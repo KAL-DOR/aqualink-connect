@@ -18,9 +18,9 @@ class QuejaPunto(BaseModel):
     lng: float
     tipo: str
     texto: str
-    username: str
-    alcaldia: Optional[str]
-    created_at: datetime
+    username: Optional[str] = None
+    alcaldia: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -97,9 +97,9 @@ async def get_quejas_mapa(
             lng=q.longitud,
             tipo=q.tipo.value if q.tipo else "otro",
             texto=q.texto[:200] + "..." if len(q.texto) > 200 else q.texto,
-            username=q.username,
+            username=q.username or "anonymous",
             alcaldia=q.alcaldia,
-            created_at=q.tweet_created_at
+            created_at=q.tweet_created_at or q.created_at
         )
         for q in quejas
     ]

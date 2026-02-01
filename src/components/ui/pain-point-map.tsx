@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -42,6 +42,17 @@ interface PainPoint {
   isUserAdded?: boolean;
 }
 
+interface Hotspot {
+  id: number;
+  cluster_label: number;
+  lat: number;
+  lon: number;
+  risk_index: number;
+  location_name: string;
+  sampled_reports: number;
+  estimated_total_reports: number;
+}
+
 // SVG icons for Leaflet markers (since Leaflet needs HTML strings)
 const svgIcons = {
   sin_agua: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>`,
@@ -70,10 +81,24 @@ const painPointConfig: Record<string, { color: string; label: string }> = {
 
 interface PainPointMapProps {
   painPoints: PainPoint[];
+  hotspots?: Hotspot[];
   onMapClick: (lat: number, lng: number, event?: { clientX: number; clientY: number }, map?: L.Map) => void;
   onPointClick?: (point: PainPoint, event?: { clientX: number; clientY: number }) => void;
   pendingLocation?: { lat: number; lng: number } | null;
   className?: string;
+}
+
+function getRiskColor(riskIndex: number): string {
+  const normalized = Math.max(0, Math.min(1, (riskIndex - 2) / 2));
+  if (normalized < 0.33) return '#fbbf24';
+  if (normalized < 0.66) return '#f97316';
+  return '#dc2626';
+}
+
+function getCircleRadius(estimatedReports: number): number {
+  const base = 300;
+  const scale = Math.log10(Math.max(10, estimatedReports)) * 200;
+  return Math.min(base + scale, 2000);
 }
 
 // Component to handle map clicks
@@ -234,6 +259,7 @@ function ClusterLayer({
 
 export function PainPointMap({
   painPoints,
+  hotspots = [],
   onMapClick,
   onPointClick,
   pendingLocation,
@@ -289,6 +315,28 @@ export function PainPointMap({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
+        {hotspots.map((hotspot) => (
+          <Circle
+            key={hotspot.id}
+            center={[hotspot.lat, hotspot.lon]}
+            radius={getCircleRadius(hotspot.estimated_total_reports)}
+            pathOptions={{
+              color: getRiskColor(hotspot.risk_index),
+              fillColor: getRiskColor(hotspot.risk_index),
+              fillOpacity: 0.25,
+              weight: 2,
+            }}
+          >
+            <Tooltip>
+              <div className="text-sm">
+                <div className="font-semibold">{hotspot.location_name}</div>
+                <div>Indice de riesgo: {hotspot.risk_index.toFixed(2)}</div>
+                <div>Reportes estimados: {hotspot.estimated_total_reports.toLocaleString()}</div>
+              </div>
+            </Tooltip>
+          </Circle>
+        ))}
+
         <ClusterLayer painPoints={painPoints} onPointClick={onPointClick} />
 
         {pendingLocation && (
@@ -319,6 +367,26 @@ export function PainPointMap({
             );
           })}
         </div>
+        {hotspots.length > 0 && (
+          <>
+            <div className="border-t border-border my-2" />
+            <div className="font-medium mb-2">Zonas de Riesgo</div>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full border-2" style={{ borderColor: '#fbbf24', backgroundColor: 'rgba(251, 191, 36, 0.25)' }} />
+                <span>Bajo</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full border-2" style={{ borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.25)' }} />
+                <span>Medio</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full border-2" style={{ borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.25)' }} />
+                <span>Alto</span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Crosshair hint */}
