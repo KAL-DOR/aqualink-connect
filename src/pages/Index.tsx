@@ -25,7 +25,11 @@ interface Stats {
   por_alcaldia: Record<string, number>;
 }
 
+<<<<<<< Updated upstream
 const API_URL = `http://${window.location.hostname}:8001/api`;
+=======
+const API_URL = 'http://localhost:8000/api';
+>>>>>>> Stashed changes
 
 const painPointTypes: { id: string; label: string; Icon: LucideIcon; color: string }[] = [
   { id: 'sin_agua', label: 'Sin agua', Icon: CircleOff, color: '#ef4444' },
