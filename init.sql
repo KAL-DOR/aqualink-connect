@@ -3,7 +3,6 @@
 
 -- Habilitar extensiones
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "postgis";
 
 -- Crear tipos enum
 CREATE TYPE estado_pedido AS ENUM ('pendiente', 'aceptado', 'en_transito', 'entregado', 'cancelado');
