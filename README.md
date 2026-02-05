@@ -23,44 +23,25 @@ AquaHub crosses **hard data** with **soft signals** to create predictive intelli
 - **<500ms** inference time per prediction
 ---
  Architecture
- flowchart TD
-    A[Data Ingestion] --> B[Feature Engineering]
-    B --> C[ML Models]
-    C --> D[API Layer]
-    D --> E[Frontend]
-    
-    subgraph DataSources[Data Sources]
-        A1[OpenWeather API<br/>5-day forecast]
-        A2[NASA POWER<br/>Soil moisture GWETPROF]
-        A3[Twitter/X Scraping<br/>960+ social reports]
-    end
-    
-    subgraph Features[14 Features]
-        B1[Hard: precip, temp, soil]
-        B2[Soft: sentiment, reports]
-        B3[Context: population, elevation]
-    end
-    
-    subgraph Models[ML Models]
-        C1[XGBoost<br/>Risk 0-4 prediction]
-        C2[DBSCAN<br/>27 hotspots]
-    end
-    
-    subgraph API[FastAPI Endpoints]
-        D1[/predict<br/>5-60 day forecast/]
-        D2[/hotspots<br/>Risk zones/]
-        D3[/alcaldias<br/>16 boroughs/]
-    end
-    
-    A --> DataSources
-    B --> Features
-    C --> Models
-    D --> API
-    E[Interactive Map<br/>Color-coded risks<br/>60-day slider]
-    
-    style DataSources fill:#e1f5ff
-    style Models fill:#e1ffe1
-    style API fill:#fff5e1
+**Data Ingestion**
+- OpenWeather API (5-day forecast)
+- NASA POWER (soil moisture GWETPROF)
+- Twitter/X Scraping (960+ social reports)
+**Feature Engineering (14 dimensions)**
+- Hard: precip_7d/30d, temp_max, soil_moisture
+- Soft: social_reports, sentiment, leak_flag
+- Context: population, elevation, month_sin/cos
+**ML Models**
+- XGBoost: Multi-class classifier (Risk 0-4)
+- DBSCAN: Spatial clustering (27 hotspots)
+**API Layer (FastAPI)**
+- POST /predict (5-60 day forecast)
+- GET /hotspots (clustered risk zones)
+- GET /alcaldias (16 boroughs data)
+**Frontend**
+- Interactive Map with color-coded risks
+- 60-day forecast slider
+- Real-time alert system
 ---
 ## Features
 ### Predictive Engine
